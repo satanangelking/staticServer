@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<head>
+  <title>我的第一个 HTML 页面</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+<style>
+  #newMy {
+    width: 200px;
+  }
+
+  #newMy input {
+    width: 100%;
+  }
+
+  .my-list {
+    position: absolute;
+    overflow-y: scroll;
+    z-index: 100;
+    max-height: 100px;
+    width: 100%;
+    background: white;
+  }
+
+  .active {
+    color: red
+  }
+
+  .add-width {
+    width: 300px;
+  }
+
+  .father-outter {
+    position: relative;
+  }
+
+  p {
+    margin: 0;
+  }
+</style>
+
+<body>
+  <div id='my'>
+    <div id='newMy'>
+      <!-- <input id='inputmy'/> -->
+    </div>
+    <div id='new'></div>
+    <button onclick="click()"></button>
+  </div>
+</body>
+
+</html>
+
+<script>
+  // 阻止冒泡事件
+  function stopBubble(e) {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();  //w3c
+    } else {
+      window.event.cancelBubble = true; //IE
+    }
+  }
+</script>
+<script>
+  function keySelectColor(arr, index, handle, color = '') {
+    if (arr.length > 0) {
+      arr[index].style.color = handle !== 'add' ? '' : color ? color : 'red'
+    }
+  }
+  function mouseSelectColor(e, handle, color) {
+    e.target.style.color = handle !== 'add' ? '' : color ? color : 'red'
+  }
+</script>
+<!-- 组件 -->
+<script>
+
+  class InputSuggest {
+    // 属性命名
+    // DOM结构生成私有属性static放置。
+    // new的时候执行初始化
+    constructor(config) {
+      this.father = config.fatherDiv // 挂载的父级
+      this.newInput = null, // 输入框
+      this.newDiv = null, // 联想列表
+      this.value = '', // 判断input输入是否一致
+      this.lastValue = '' // 判断Ajax执行时输入值是否一致
+      this.selectedColor = config.color || 'red',
+      this.divClassList = config.divClassList || [],
+      this.inputClass = config.inputClass || []
+      this.timer = null;
+      this.isOnblue = false
+    }
+    // 添加元素
+    addNewInput = () => {
+      // 抽离方法， 元素生成写死。 
+
+      // 生成input元素
+      this.newInput = document.createElement('input')
+      // 列表的值
+      this.newInput.option = []
+      // 索引下标
+      this.newInput.optionKey = 0
+      let outterDiv = document.createElement('div')
+      outterDiv.classList.add('father-outter')
+      // 生成input对应的列表包裹父级
+      this.newDiv = document.createElement('div')
+      this.divClassList.forEach(item => {
+        outterDiv.classList.add(item)
+      })
+      this.inputClass.forEach(item => {
+        this.newInput.classList.add(item)
+      })
+      // 添加包裹父级的样式
+      this.newDiv.classList.add('my-list')
+
+      // 对传入的item元素处插入组件 和 列表
+      outterDiv.appendChild(this.newInput)
+      outterDiv.appendChild(this.newDiv)
+      // my.appendChild(suggestDiv)
+      this.father.appendChild(outterDiv)
+      // 绑定div事件 和 input事件
+      this.divEvent()
+      this.inputEvent()
+      // outterDiv.onclick = (e)=>{
+      //   console.log(1)
+      //   this.newDiv.style.visibility = 'hidden'
+      // }
+    }
+    // 输入框事件绑定
+    inputEvent = () => {
+      // 为什么不用onfocus  而采用click。
+      this.newInput.onclick = (e) => {
+        stopBubble(e)
+        this.newDiv.style.visibility = 'visible'
+        document.onclick = (event) => {
+          if (event.target != this.newInput) {
+            this.newDiv.style.visibility = 'hidden'
+            document.onclick = null
+          }
+        }
+      }
+      // this.newInput.onblur = (e) => {
+      //   console.log(2)
+      //   // document.onclick = (event) =>{
+      //   //   console.log(1)
+      //   //   if (event.target != this.newInput) {
+      //   //     this.newDiv.style.visibility = 'hidden'
+      //   //     document.onclick = null
+      //   //   }
+      //   // }
+      //   // this.newDiv.style.visibility = 'hidden'
+      // }
+      // 键盘上下键 呼出已提交过的内容
+      this.newInput.onkeydown = (e) => {
+        if ((e.keyCode == 40 || e.keyCode == 38 || e.keyCode == 13) && e.target.option && e.target.option.length > 0) {
+          switch (e.keyCode) {
+            case 38:
+              {
+                keySelectColor(e.target.option, e.target.optionKey, 'dele', this.selectedColor)
+                if (e.target.optionKey > 0) {
+                  --e.target.optionKey
+                } else {
+                  e.target.optionKey = e.target.option.length - 1
+                }
+                keySelectColor(e.target.option, e.target.optionKey, 'add', this.selectedColor)
+                break;
+              }
+            case 40:
+              {
+                keySelectColor(e.target.option, e.target.optionKey, 'dele', this.selectedColor)
+                ++e.target.optionKey
+                if (e.target.optionKey < e.target.option.length) {
+                } else {
+                  e.target.optionKey = 0
+                }
+                keySelectColor(e.target.option, e.target.optionKey, 'add', this.selectedColor)
+                break;
+              }
+            case 13:
+              {
+                e.target.value = e.target.option[e.target.optionKey].innerHTML
+                this.Ajax(e.target.value)
+                break;
+              }
+          }
+          if (document.onmousemove == null) {
+            this.newDiv.onmouseover = null
+            this.newDiv.onmouseout = null
+            document.onmousemove = () => {
+              this.newDiv.onmouseover = (e) => {
+                stopBubble(e)
+                if (e.target !== this.newDiv) {
+                  keySelectColor(this.newInput.option, this.newInput.optionKey, 'del', this.selectedColor)
+                  if (e.target.getMyIndex + 1) {
+                    this.newInput.optionKey = e.target.getMyIndex
+                  }
+                  mouseSelectColor(e, 'add', this.selectedColor)
+                }
+              }
+              this.newDiv.onmouseout = (e) => {
+                stopBubble()
+                if (e.target !== this.newDiv) {
+                  mouseSelectColor(e, 'del', this.selectedColor)
+                }
+              }
+              document.onmousemove = null
+            }
+          }
+          // 滚动列表距离
+          const a = e.target.option[0].offsetHeight
+          const minHeight = this.newDiv.clientHeight
+          let height = 0
+          for (let i = 0; i <= e.target.optionKey; i++) {
+            height += e.target.option[i].clientHeight
+          }
+          const moveHeight = height - minHeight
+          if (moveHeight > 0) {
+            this.newDiv.scrollTo(0, moveHeight)
+          } else {
+            this.newDiv.scrollTo(0, 0)
+          }
+        }
+      }
+      // 输入改变时
+      this.newInput.oninput = (e) => {
+        this.value = e.target.value
+        clearTimeout(this.timer)
+        this.timer = setTimeout(() => {
+          if (e.target.value === this.value) {
+            this.Ajax(e.target.value)
+            // associationDiv.style.display = 'block'
+            // this.newDiv.style.visibility = 'visible'
+            // this.newInput.option = this.newDiv.getElementsByTagName("p")
+          }
+        }, 300)
+      }
+    }
+
+    divEvent = () => {
+      // 鼠标移入移出
+      this.newDiv.onmouseover = (e) => {
+        stopBubble()
+        if (e.target !== this.newDiv) {
+          keySelectColor(this.newInput.option, this.newInput.optionKey, 'del', this.selectedColor)
+          if (e.target.getMyIndex >= 0) {
+            this.newInput.optionKey = e.target.getMyIndex
+          }
+          mouseSelectColor(e, 'add', this.selectedColor)
+        }
+      }
+      this.newDiv.onmouseout = (e) => {
+        stopBubble(e)
+        // e.prevent
+        if (e.target !== this.newDiv) {
+          mouseSelectColor(e, 'del', this.selectedColor)
+          // keySelectColor(this.newInput.option,this.newInput.optionKey,'add')
+        }
+      }
+      // 列表绑定点击事件
+      // click 和 up 区别
+      this.newDiv.onmouseup = (e) => {
+        stopBubble(e)
+        this.newInput.value = e.target.innerHTML
+        this.newDiv.style.visibility = 'hidden'
+        this.newInput.option = []
+        this.newInput.optionKey = 0
+        this.Ajax(e.target.innerHTML)
+      }
+    }
+
+    Ajax = (data) => {
+      if (this.lastValue != data) {
+        this.lastValue = data
+        //1. 创建对象
+        const x = new XMLHttpRequest();
+        //2. 初始化设置
+        x.open("GET", `api/qsonhs.aspx?type=cb&cb=callback&q=${data}`);
+        //3. 发送
+        x.send(null);
+        //4. 绑定事件
+        x.onreadystatechange = () => {
+          // 用JSONP调。
+          if (x.readyState === 4) {
+            if (x.status == 200) {
+              console.log(x.responseText)
+              if (x.response.includes("if(typeof callback == 'function')")) {
+                const b = x.response.slice(x.response.indexOf('{'), 1 + x.response.lastIndexOf('}'))
+                this.getList(JSON.parse(b))
+              } else {
+                console.log('返回的数据格式有误')
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 获取数据
+    getList = (data) => {
+      this.newDiv.innerHTML = ''
+      const { AS = {} } = data
+      const { Results = [] } = AS
+      if (Results.length <= 0) return
+      const { Suggests = [] } = Results[0]
+      Suggests.forEach((item, index) => {
+        const child = document.createElement('p')
+        child.innerHTML = item.Txt
+        child.getMyIndex = index
+        this.newDiv.appendChild(child)
+      })
+      this.newDiv.scrollTo(0, 0)
+      this.newInput.option = this.newDiv.getElementsByTagName('p')
+      this.newInput.optionKey = 0
+      keySelectColor(this.newInput.option, 0, 'add', this.selectedColor)
+    }
+  }
+</script>
+<script>
+  // 组件添加
+  const a = new InputSuggest({
+    fatherDiv: document.getElementById('newMy'),
+    color: 'blue',
+    divClassList: ['add-width'],
+    inputClass: []
+  })
+  const b = new InputSuggest({
+    fatherDiv: document.getElementById('new'),
+    color: 'green',
+    divClassList: ['add-width'],
+    inputClass: []
+  })
+  a.addNewInput()
+  b.addNewInput()
+</script>

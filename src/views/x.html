@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<head>
+  <title>我的第一个 HTML 页面</title>
+  <link rel="stylesheet" type="text/css" href="index.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+</head>
+
+<body>
+  <div id='my'>1
+    <div id='newMy' style="width: 200px; ">
+    </div>
+  </div>
+  <img src="./ic_400@3x.png" />
+  <div onclick='getData()'>确定</div>
+  <div onclick="">取消</div>
+</body>
+
+</html>
+<!-- 组件 -->
+<script src='../../node_modules/ejs/ejs.min.js'></script>
+<script>
+  let people = ['geddy', 'neil', 'alex'],
+  const myList = ['修改.txt', '删除','.txt']
+  const input = document.createElement('input')
+  const handleFile = (e) => {
+    // 旧名称
+    const suffixIndex = e.target.innerHTML.lastIndexOf('.')
+    let suffix = ''
+    if (suffixIndex >= 0) {
+      suffix = e.target.innerHTML.slice(suffixIndex)
+    }
+    // 新名称
+    const newName = window.prompt('', suffix)
+    let rewrite_suffixIndex = newName.lastIndexOf('.')
+    let rewrite_suffix = ''
+    if (rewrite_suffixIndex >= 0) {
+      rewrite_suffix = newName.slice(rewrite_suffixIndex)
+    }
+    
+    if(suffix.length==0 && rewrite_suffix.length>=0){
+      console.log('不能将文件夹命名为文件')
+      return
+    } 
+    if (myList.includes(newName)) {
+      console.log('文件已存在，请重新命名')
+      return 
+    }
+    e.target.innerHTML = newName
+  }
+  const createMenu = () => {
+    fileList.oncontextmenu = (e) => {
+      e.stopPropagation()
+      handleFile(e)
+      return false
+    }
+  }
+  createMenu()
+</script>
+<script type="module">
+  /**
+   * new一个实例
+   * color: 选中变色
+   * newMy: 组件挂载对象
+  */
+  class InputSuggest {
+    // 属性
+    constructor(config) {
+      this.element = {
+        outterDiv: config.newMy,
+        Input: null, // 输入框
+        divList: null, // 联想列表
+        cancelDiv: null // 删除图标
+      }
+      this.styleName = {
+        selectedColor: config.color || 'red',
+      }
+      this.data = {
+        value: '',
+        timer: '',
+      }
+    }
+    // 初始化
+    initFn = (() => {
+      /**
+       * 延迟初始化执行时机， 等待new完成
+       */
+      setTimeout(() => {
+        // 组件的父级, 用来使用position。
+        const includeDiv = document.createElement('div')
+        includeDiv.style.position = 'relative'
+        // 列表
+        this.element.divList = document.createElement('div')
+        // x图标
+        this.element.cancelDiv = document.createElement('div')
+        this.element.cancelDiv.innerHTML = 'x'
+        // input
+        this.element.Input = document.createElement('input')
+        /**
+         * 存储数据
+         * 当键盘上下键移动时 便于选中色更换
+         */
+        this.element.Input.option = []
+        this.element.Input.optionKey = 0
+
+        this.element.Input.className = 'my-input'
+        this.element.divList.className = 'my-list'
+        this.element.cancelDiv.className = 'my-cancel'
+
+        includeDiv.appendChild(this.element.Input)
+        includeDiv.appendChild(this.element.divList)
+        includeDiv.appendChild(this.element.cancelDiv)
+
+        this.element.outterDiv.appendChild(includeDiv)
+
+        this.divEvent()
+        this.inputEvent()
+        this.cancelEvent()
+      }, 0)
+    })()
+
+    // JSONP的回调函数
+    callbackWindow = (data) => {
+      /**
+       * window.callback需要被重写, 谁调用这个callback就为谁负责。
+       * 如果不重写，两个以上Input, callback总是监听最后一个挂载上的input
+       */
+      window.callback = (res) => {
+        const { divList, Input } = this.element
+        divList.innerHTML = ''
+        const { AS = {} } = res || {}
+        const { Results = [] } = AS
+        if (Results.length <= 0) return
+        const { Suggests = [] } = Results[0]
+        Suggests.map((item, index) => {
+          const child = document.createElement('p')
+          child.innerHTML = item.Txt
+          child.getMyIndex = index
+          divList.appendChild(child)
+        })
+        divList.scrollTo(0, 0)
+        Input.option = divList.getElementsByTagName('p')
+        Input.optionKey = 0
+        this.keySelectColor('add')
+      }
+      let script = document.createElement('script');
+      script.type = "text/javascript";
+      script.src = `https://sg1.api.bing.com/qsonhs.aspx?type=cb&cb=callback&q=${data}`;
+      document.body.replaceChild(script, document.body.firstChild)
+    }
+
+    // 删除图标事件
+    cancelEvent = () => {
+      const { cancelDiv, Input, divList } = this.element
+      cancelDiv.onclick = (e) => {
+        e.stopPropagation()
+        Input.value = ''
+        divList.innerHTML = ''
+        Input.focus()
+      }
+    }
+
+    // input事件绑定
+    inputEvent = () => {
+      const { Input, divList } = this.element
+      Input.onfocus = (e) => {
+        divList.style.visibility = 'visible'
+        Input.style.borderColor = 'blue'
+      }
+      Input.onblur = (e) => {
+        divList.style.visibility = 'hidden'
+        Input.style.borderColor = 'gray'
+      }
+      // 键盘上下键 
+      Input.onkeydown = (e) => {
+        divList.style.visibility = 'visible'
+        if (e.target.option && e.target.option.length > 0) {
+          switch (e.keyCode) {
+            case 38:
+              {
+                this.keySelectColor('dele')
+                if (e.target.optionKey > 0) {
+                  --e.target.optionKey
+                } else {
+                  e.target.optionKey = e.target.option.length - 1
+                }
+
+                this.keySelectColor('add')
+                break;
+              }
+            case 40:
+              {
+                this.keySelectColor('dele')
+                ++e.target.optionKey
+                if (e.target.optionKey < e.target.option.length) {
+                } else {
+                  e.target.optionKey = 0
+                }
+                this.keySelectColor('add')
+                break;
+              }
+            case 13:
+              {
+                e.target.value = e.target.option[e.target.optionKey].innerHTML
+                this.callbackWindow(e.target.value)
+                break;
+              }
+          }
+        }
+        if (e.keyCode == 40 || e.keyCode == 38 || e.keyCode == 13) {
+          /**
+           * 由于鼠标绑定的over和out 在键盘上下移动的时候会触发
+           * 所以在移动键盘的时候将两个方法移除，
+           * 并监听document的move事件，当移动的时候重新绑定两个事件并将move事件清除
+          */
+          if (document.onmousemove == null) {
+            divList.onmouseover = null
+            divList.onmouseout = null
+            document.onmousemove = () => {
+              divList.onmouseover = (e) => {
+                e.stopPropagation()
+                if (e.target !== divList) {
+                  this.keySelectColor('del')
+                  if (e.target.getMyIndex + 1) {
+                    Input.optionKey = e.target.getMyIndex
+                  }
+                  this.mouseSelectColor(e, 'add')
+                }
+              }
+              divList.onmouseout = (e) => {
+                e.stopPropagation()
+                if (e.target !== divList) {
+                  this.mouseSelectColor(e, 'del')
+                }
+              }
+              document.onmousemove = null
+            }
+          }
+
+          // 滚动列表距离
+          const minHeight = divList.clientHeight
+          let height = 0
+          for (let i = 0; i <= e.target.optionKey; i++) {
+            height += e.target.option[i].clientHeight
+          }
+          const moveHeight = height - minHeight
+          if (moveHeight > 0) {
+            divList.scrollTo(0, moveHeight)
+          } else {
+            divList.scrollTo(0, 0)
+          }
+        }
+      }
+      // 输入改变时
+      Input.oninput = (e) => {
+        this.data.value = e.target.value
+        clearTimeout(this.data.timer)
+        this.data.timer = setTimeout(() => {
+          if (e.target.value === this.data.value) {
+            this.callbackWindow(e.target.value)
+          }
+        }, 300)
+      }
+    }
+
+    // div事件绑定
+    divEvent = () => {
+      // 鼠标移入移出
+      const { divList, Input } = this.element
+      divList.onmouseover = (e) => {
+        e.stopPropagation()
+        if (e.target !== divList) {
+          this.keySelectColor('dele')
+          if (e.target.getMyIndex >= 0) {
+            Input.optionKey = e.target.getMyIndex
+          }
+          this.mouseSelectColor(e, 'add')
+        }
+      }
+      divList.onmouseout = (e) => {
+        e.stopPropagation()
+        if (e.target !== divList) {
+          this.mouseSelectColor(e, 'del')
+        }
+      }
+      // 列表绑定点击事件。
+      // 采用mousedown 由于执行时机在onblur之前。
+      divList.onmousedown = (e) => {
+        e.stopPropagation()
+        console.log(1)
+        Input.value = e.target.innerHTML
+        divList.style.visibility = 'hidden'
+        Input.option = []
+        Input.optionKey = 0
+        this.callbackWindow(e.target.innerHTML)
+      }
+    }
+
+    // 选中变色（键盘,鼠标）
+    keySelectColor = (handle) => {
+      const { selectedColor } = this.styleName
+      const { Input } = this.element
+      if (Input.option.length > 0) {
+        Input.option[Input.optionKey].style.color = handle !== 'add' ? '' : selectedColor
+      }
+    }
+    mouseSelectColor = (e, handle) => {
+      const { selectedColor } = this.styleName
+      e.target.style.color = handle !== 'add' ? '' : selectedColor
+    }
+  }
+  const newMy = document.getElementById('newMy')
+  new InputSuggest({
+    color: 'blue',
+    newMy,
+  })
+  new InputSuggest({
+    color: 'red',
+    newMy,
+  })
+</script>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Node Server</title>
+  </head>
+  <!-- 采用绝对路径(/)， 避免使用相对路径(../ || ./)导致文件夹层级混乱 -->
+  <body>
+    <div>当前目录:&nbsp;&nbsp;<span id='target' style="font-size: 20px;color:red"><%= dir %></span>
+    </div>
+    <% if(dir !== '' ) { %>
+      <a style="color: orange;font-size: 20px;" href="<%= dirfather %>"> 返回上一级</a><br />
+    <% }%>
+    <div style="margin-top: 10px;"></div>
+    <div id='file'>
+      <% files.forEach(function(name){ %>
+        <a href="<%= dirfather!=='/' ? '/'+dir : dir %>/<%= decodeURIComponent(name) %>"> <%= name %></a><br />
+        <% }) %>
+    </div>
+  </body>
+</html>
+<script>
+  const target = document.getElementById('target')
+  let dir = target.innerHTML.trim()
+  const fileListDom = document.getElementById('file')
+  const fileList = []
+  for(let i=0;i<fileListDom.children.length;i=i+2){
+    fileList.push(fileListDom.children[i].innerHTML.trim())
+  }
+  const handleFile = (e) => {
+    if(e.target==fileListDom) {
+      return
+    } 
+    // 旧名称
+    const suffixIndex = e.target.innerHTML.lastIndexOf('.')
+    let suffix = ''
+    if (suffixIndex >= 0) {
+      suffix = e.target.innerHTML.slice(suffixIndex)
+    }
+    // 新名称
+    const newName = window.prompt('', suffix)
+    console.log(newName)
+    if (fileList.includes(newName)||!newName) {
+      console.log('文件已存在，请重新命名')
+      return 
+    }
+    const x = new XMLHttpRequest();
+    //2. 初始化设置
+    // x.open("post", dir + '/changeFile');
+    x.open("get",  `/changeFile/${dir}?old=${e.target.innerHTML.trim()}&new=${newName}`);
+    //3. 发送
+    // x.setRequestHeader('Content-Type', 'application/json')
+    // x.send(`${e.target.innerHTML.trim()}&${newName}`);
+    x.send(null)
+    //4. 绑定事件
+    x.onreadystatechange = () => {
+     if (x.readyState === 4) {
+       if (x.status == 200) {
+         window.location.href = ''
+       }
+     }
+    }
+    e.target.innerHTML = newName
+  }
+  const createMenu = () => {
+    fileListDom.oncontextmenu = (e) => {
+      e.stopPropagation()
+      handleFile(e)
+      return false
+    }
+  }
+  createMenu()
+</script>
