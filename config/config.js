@@ -1,10 +1,10 @@
 const config = {
   path: decodeURIComponent(process.cwd()), // 获取根路径， 解码为了获取正确中文地址
   // path: '/Users/',
-  host: '127.0.0.1',
-  port: '3003',
-  // host: '0.0.0.0',
-  // port: '80',
+  // host: '127.0.0.1',
+  // port: '3003',
+  host: '0.0.0.0',
+  port: '80',
   zip: /\b(gzip|deflate)\b/, //匹配压缩请求头
   types:{
     ".css": "text/css",
