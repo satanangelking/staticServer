@@ -7,14 +7,14 @@ const changeFileName = require("./utils/changeFileName");
 
 const server = http.createServer((request, response) => {
   //新版Api
-  const actualURL = `http://${config.host}:${config.port}${request.url}`
-  const urlObj = new URL(actualURL)
-  const urlPathname = urlObj.pathname;
-  const query = urlObj.searchParams
-  // 老版Api
-  // const urlObj = url.parse(request.url);
+  // const actualURL = `http://${config.host}:${config.port}${request.url}`
+  // const urlObj = new URL(actualURL)
   // const urlPathname = urlObj.pathname;
-  // const query = urlObj.query
+  // const query = urlObj.searchParams
+  // 老版Api
+  const urlObj = url.parse(request.url);
+  const urlPathname = urlObj.pathname;
+  const query = urlObj.query
   // 更改文件名， 通过ajax请求
   if (urlPathname.startsWith("/changeFile/")) {
     // changeFileName(request, response, path.dirname(urlPathname), query);

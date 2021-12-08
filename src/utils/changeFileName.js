@@ -17,11 +17,11 @@ module.exports = (request, response, urlPathname, query) => {
     try {
       fs.rename(
         // 老版api
-        // filePathname + "/" + Obj.old,
-        // filePathname + "/" + Obj.new,
+        filePathname + "/" + Obj.old,
+        filePathname + "/" + Obj.new,
         // 新版api
-        filePathname + "/" + query.get('old'),
-        filePathname + "/" + query.get('new'),
+        // filePathname + "/" + query.get('old'),
+        // filePathname + "/" + query.get('new'),
         (err) => {
           console.log(err);
           if (!err) {
